@@ -272,7 +272,11 @@ class Mailer:
             room_id = list(notifs_by_room.keys())[0]
 
             summary_text = await self.make_summary_text_single_room(
-                room_id, notifs_by_room[room_id], state_by_room[room_id], notif_events, user_id
+                room_id,
+                notifs_by_room[room_id],
+                state_by_room[room_id],
+                notif_events,
+                user_id,
             )
         else:
             summary_text = await self.make_summary_text(
@@ -603,16 +607,43 @@ class Mailer:
             else:
                 # If the room doesn't have a name, say who the messages
                 # are from explicitly to avoid, "messages in the Bob room"
-                sender_ids = list({notif_events[n["event_id"]].sender for n in notifs})
+                sender_ids = {notif_events[n["event_id"]].sender for n in notifs}
 
-                member_events = await self.store.get_events(
-                    [room_state_ids[("m.room.member", s)] for s in sender_ids]
-                )
+                # Attempt to get some names of the senders.
+                member_event_ids = [
+                    room_state_ids[("m.room.member", s)]
+                    for s in sender_ids
+                    if ("m.room.member", s) in room_state_ids
+                ]
 
-                return self.email_subjects.messages_from_person % {
-                    "person": descriptor_from_member_events(member_events.values()),
-                    "app": self.app_name,
-                }
+                if member_event_ids:
+                    member_events = await self.store.get_events(member_event_ids)
+
+                    # If all the sender events were found.
+                    if len(sender_ids) == len(member_event_ids):
+                        return self.email_subjects.messages_from_person % {
+                            "person": descriptor_from_member_events(
+                                member_events.values()
+                            ),
+                            "app": self.app_name,
+                        }
+
+                    # If some member events were missing.
+                    else:
+                        return self.email_subjects.messages_from_person_and_others % {
+                            "person": descriptor_from_member_events(
+                                member_events.values()
+                            ),
+                            "app": self.app_name,
+                        }
+
+                else:
+                    # No member events were found! Maybe the room is empty?
+                    # Fallback to the room ID.
+                    return self.email_subjects.messages_in_room % {
+                        "room": room_id,
+                        "app": self.app_name,
+                    }
 
     async def make_summary_text(
         self,
