@@ -563,12 +563,12 @@ class Mailer:
                     "person": inviter_name,
                     "app": self.app_name,
                 }
-            else:
-                return self.email_subjects.invite_from_person_to_room % {
-                    "person": inviter_name,
-                    "room": room_name,
-                    "app": self.app_name,
-                }
+
+            return self.email_subjects.invite_from_person_to_room % {
+                "person": inviter_name,
+                "room": room_name,
+                "app": self.app_name,
+            }
 
         if len(notifs) == 1:
             # There is just the one notification, so give some detail
@@ -590,12 +590,12 @@ class Mailer:
                     "person": sender_name,
                     "app": self.app_name,
                 }
-            else:
-                # The sender is unknown, just use the room name (or ID).
-                return self.email_subjects.messages_in_room % {
-                    "room": room_name or room_id,
-                    "app": self.app_name,
-                }
+
+            # The sender is unknown, just use the room name (or ID).
+            return self.email_subjects.messages_in_room % {
+                "room": room_name or room_id,
+                "app": self.app_name,
+            }
         else:
             # There's more than one notification for this room, so just
             # say there are several
@@ -604,10 +604,10 @@ class Mailer:
                     "room": room_name,
                     "app": self.app_name,
                 }
-            else:
-                return await self.make_summary_text_from_member_events(
-                    room_id, notifs, room_state_ids, notif_events
-                )
+
+            return await self.make_summary_text_from_member_events(
+                room_id, notifs, room_state_ids, notif_events
+            )
 
     async def make_summary_text(
         self,
@@ -635,12 +635,11 @@ class Mailer:
                 "room": reason["room_name"],
                 "app": self.app_name,
             }
-        else:
-            room_id = reason["room_id"]
 
-            return await self.make_summary_text_from_member_events(
-                room_id, notifs_by_room[room_id], room_state_ids[room_id], notif_events
-            )
+        room_id = reason["room_id"]
+        return await self.make_summary_text_from_member_events(
+            room_id, notifs_by_room[room_id], room_state_ids[room_id], notif_events
+        )
 
     async def make_summary_text_from_member_events(
         self,
@@ -683,21 +682,19 @@ class Mailer:
                 }
 
             # There was more than one sender, just use the first one.
-            else:
-                return self.email_subjects.messages_from_person_and_others % {
-                    "person": descriptor_from_member_events(
-                        list(member_events.values())[:1]
-                    ),
-                    "app": self.app_name,
-                }
-
-        else:
-            # No member events were found! Maybe the room is empty?
-            # Fallback to the room ID.
-            return self.email_subjects.messages_in_room % {
-                "room": room_id,
+            return self.email_subjects.messages_from_person_and_others % {
+                "person": descriptor_from_member_events(
+                    list(member_events.values())[:1]
+                ),
                 "app": self.app_name,
             }
+
+        # No member events were found! Maybe the room is empty?
+        # Fallback to the room ID.
+        return self.email_subjects.messages_in_room % {
+            "room": room_id,
+            "app": self.app_name,
+        }
 
     def make_room_link(self, room_id: str) -> str:
         if self.hs.config.email_riot_base_url:
