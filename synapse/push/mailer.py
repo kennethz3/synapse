@@ -675,17 +675,19 @@ class Mailer:
         if member_event_ids:
             member_events = await self.store.get_events(member_event_ids)
 
-            # If all the sender events were found.
-            if len(sender_ids) == len(member_event_ids):
+            # There was a single sender.
+            if len(sender_ids) == 1:
                 return self.email_subjects.messages_from_person % {
                     "person": descriptor_from_member_events(member_events.values()),
                     "app": self.app_name,
                 }
 
-            # If some member events were missing.
+            # There was more than one sender, just use the first one.
             else:
                 return self.email_subjects.messages_from_person_and_others % {
-                    "person": descriptor_from_member_events(member_events.values()),
+                    "person": descriptor_from_member_events(
+                        list(member_events.values())[:1]
+                    ),
                     "app": self.app_name,
                 }
 
